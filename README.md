@@ -49,7 +49,7 @@ This repository contains a simple Cloudflare Worker that acts as a proxy to fetc
 4. **Update `wrangler.toml`**  
    Ensure your `wrangler.toml` contains your account ID and desired Worker name:
    ```toml
-   name = "my-proxy-worker"
+   name = "uptime-proxy"
    type = "javascript"
 
    account_id = "<YOUR_ACCOUNT_ID>"
@@ -82,7 +82,7 @@ wrangler publish
 
 After a successful deploy, Wrangler will display your live Worker URL:
 ```
-✨  Successfully published to https://my-proxy-worker.your-subdomain.workers.dev
+✨  Successfully published to https://uptime-proxy.your-subdomain.workers.dev
 ```
 
 ---
@@ -99,7 +99,7 @@ To inspect and monitor your Worker in the Cloudflare Dashboard:
    - Otherwise, choose your zone, then click **Workers** in the sidebar.
 
 3. **Open Your Worker**  
-   - Under the **Workers** tab, find your Worker by name (e.g., `my-proxy-worker`).  
+   - Under the **Workers** tab, find your Worker by name (e.g., `uptime-proxy`).  
    - Click on the Worker to view its script, settings, and deployment history.
 
 4. **View Metrics**  
