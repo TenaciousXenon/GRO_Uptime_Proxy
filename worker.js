@@ -10,117 +10,87 @@
 
 // Configuration and utility modules
 
-const dnsAllowList = [
-  "example.com",
-  "cloudflare.com",
-  "api.example.org"
-];
+/**
+ * Simple GET/POST proxy Worker
+ *  - GET  /?url=<encoded-target>
+ *  - POST {"url":"<target>"} as JSON
+ * For each request, does a full GET of the target site
+ * and returns status, headers, and body (binary-safe).
+ */
 
-function dnsFilter(hostname) {
-  // Check DNS against an allow list
-  return dnsAllowList.includes(hostname);
-}
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
 
-class TokenFilter {
-  constructor(options = {}) {
-    this.patterns = options.patterns || [/^token_[a-z0-9]+/i];
+async function handleRequest(request) {
+  let target
+
+  // 1) Extract target URL from GET or POST
+  if (request.method === 'GET') {
+    target = new URL(request.url).searchParams.get('url')
+  } else if (request.method === 'POST') {
+    const ct = request.headers.get('Content-Type') || ''
+    if (ct.includes('application/json')) {
+      try {
+        const { url } = await request.json()
+        target = url
+      } catch {
+        return new Response('Invalid JSON body', { status: 400 })
+      }
+    } else {
+      return new Response('Unsupported Content-Type', { status: 415 })
+    }
+  } else {
+    return new Response('Method Not Allowed', { status: 405 })
   }
-  filter(token) {
-    // Sanitize or validate token
-    return this.patterns.some((p) => p.test(token));
-  }
-}
 
-const allowList = [
-  "https://allowed.example/path",
-  "https://another-safe-host/"
-];
-
-function isUrlAllowed(url) {
-  try {
-    const u = new URL(url);
-    return allowList.includes(u.origin + u.pathname);
-  } catch {
-    return false;
-  }
-}
-
-const waitTimes = { min: 100, max: 1000 };
-async function waitRandom() {
-  const ms =
-    Math.floor(Math.random() * (waitTimes.max - waitTimes.min + 1)) +
-    waitTimes.min;
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function waitFixed(ms = 500) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function recordMetric(name, value) {
-  console.debug(`[METRIC] ${name}: ${value}`);
-}
-
-function headerInspection(headers) {
-  // Inspect headers for custom flags
-  return headers.has("X-Custom-Flag");
-}
-
-function generateSessionId() {
-  // Generate a random session identifier
-  return crypto.randomUUID();
-}
-
-const FEATURE_FLAGS = {
-  advancedFiltering: false,
-  detailedLogging: true,
-};
-
-class RateLimiter {
-  constructor(limit = 100) {
-    this.limit = limit;
-    this.requests = new Map();
-  }
-  check(ip) {
-    const count = this.requests.get(ip) || 0;
-    this.requests.set(ip, count + 1);
-    return this.requests.get(ip) <= this.limit;
-  }
-}
-
-addEventListener("fetch", (event) => {
-  event.respondWith(handle(event.request));
-});
-
-async function handle(request) {
-  const { searchParams } = new URL(request.url);
-  const target = searchParams.get("url");
   if (!target) {
-    return new Response("⚠️ Missing `?url=` parameter", { status: 400 });
+    return new Response('Missing "url" parameter', { status: 400 })
   }
 
+  // 2) Validate URL
+  let fetchUrl
   try {
-    const resp = await fetch(target, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
-          "AppleWebKit/537.36 (KHTML, like Gecko) " +
-          "Chrome/118.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-      redirect: "follow",
-    });
-
-    const body = await resp.arrayBuffer();
-    return new Response(body, {
-      status: resp.status,
-      headers: resp.headers,
-    });
-  } catch (err) {
-    return new Response(
-      `🚨 Error fetching ${target}: ${err}`,
-      { status: 502 }
-    );
+    fetchUrl = new URL(target).toString()
+  } catch {
+    return new Response('Invalid URL', { status: 400 })
   }
+
+  // 3) Perform fetch
+  let upstreamResponse
+  try {
+    upstreamResponse = await fetch(fetchUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; CF-Worker)',
+        'Accept': '*/*'
+      },
+      redirect: 'follow'
+    })
+  } catch (err) {
+    return new Response(`Error fetching target: ${err.message}`, { status: 502 })
+  }
+
+  // 4) Capture status and headers early
+  const upstreamStatus  = upstreamResponse.status
+  const upstreamHeaders = new Headers(upstreamResponse.headers)
+
+  // 5) Read body as ArrayBuffer (binary-safe)
+  let bodyBuffer
+  try {
+    bodyBuffer = await upstreamResponse.arrayBuffer()
+  } catch {
+    return new Response('Error reading upstream response', { status: 502 })
+  }
+
+  // 6) Add CORS/debug headers
+  upstreamHeaders.set('Access-Control-Allow-Origin', '*')
+  upstreamHeaders.set('X-Proxy-Worker', 'cloudflare')
+  upstreamHeaders.set('X-Upstream-Status', String(upstreamStatus))
+
+  // 7) Return proxied response
+  return new Response(bodyBuffer, {
+    status: upstreamStatus,
+    headers: upstreamHeaders
+  })
 }
