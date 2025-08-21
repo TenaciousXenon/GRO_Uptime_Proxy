@@ -1,8 +1,6 @@
 # UptimeRobot Runbook (Non‑Technical)
 
-This guide walks you through how to add and delete monitors in UptimeRobot and how to troubleshoot when a monitor shows a site as “down.” It is written for non‑CS users and uses simple, step‑by‑step instructions.
-
-If you get stuck after following the steps, it’s okay to pause, try again later, or escalate to someone technical.
+This guide walks you through how to add and delete monitors in UptimeRobot and how to troubleshoot when a monitor shows a site as “down.” 
 
 
 ## Quick Definitions
@@ -35,7 +33,7 @@ Use this when you want UptimeRobot to start watching a website.
    - HTTP(s): Good for basic uptime checks (is the site responding?)
    - Keyword: Good for verifying a specific text exists on the page (we often use the GTM ID)
 4) Fill out the fields:
-   - Friendly Name: A clear label (e.g., “Client ABC – Homepage”)
+   - Friendly Name: A clear label (e.g., “GTM-XXXXXXX – Company”)
    - URL:
      - Start with the normal link (e.g., https://example.com/)
      - If it immediately reports “down” after you save, switch to the proxy link:
@@ -46,7 +44,7 @@ Use this when you want UptimeRobot to start watching a website.
 5) Advanced Options:
    - Request Method: Start with GET
    - If the proxy is very slow or results are inconsistent, try switching to POST (leave the request body empty unless instructed)
-6) Alert Contacts: Select who should be notified
+6) Alert Contacts: Select who should be notified (Ingrid Tayshuns- Email, GTM ISSUES- Slack)
 7) Create/Saved
 8) Immediately Pause and then Resume the monitor (see “Important Note About Monitor Updates” above)
 
@@ -57,7 +55,7 @@ Use this if a site is retired/churned or you no longer need monitoring.
 
 1) Find the monitor in UptimeRobot
 2) Open the monitor’s settings/details
-3) Click Delete (trash icon or “Delete Monitor”)
+3) Click Delete (trash icon or “Delete Monitor”) (Personally I use the bulk action feature)
 4) Confirm
 
 Tip: If you aren’t 100% sure, you can Pause the monitor instead of deleting it.
