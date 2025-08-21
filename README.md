@@ -125,4 +125,4 @@ To inspect and monitor your Worker in the Cloudflare Dashboard:
 
 ---
 
-** Contact jburke@gromarketing.com for help **  
+ Contact jburke@gromarketing.com for help   
